@@ -113,7 +113,7 @@ export default function FamilyTree({ persons, selected, onSelect, theme }) {
   return (
     <div>
       <div className="print-title">{self?`Silsilah Keluarga ${self.name}`:''}</div>
-      <div className="print-sub">Dicetak dari nasab-app.vercel.app</div>
+      <div className="print-sub">Dicetak dari sulalah.vercel.app</div>
       <div id="cw" style={{ overflow:'auto',height:420,border:'1px solid var(--bd)',borderRadius:12,background:'var(--surf)',position:'relative' }}>
         <div id="ci" ref={containerRef} style={{ position:'relative',width:svgW,height:svgH }}>
           <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ position:'absolute',top:0,left:0,pointerEvents:'none',overflow:'visible' }} dangerouslySetInnerHTML={{ __html:lines }} />

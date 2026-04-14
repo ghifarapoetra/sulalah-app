@@ -87,7 +87,7 @@ export default function TreePage() {
       {/* Topbar */}
       <div className="topbar no-print" style={{ borderRadius:'0 0 14px 14px',marginBottom:16 }}>
         <div>
-          <div className="topbar-title">🌳 Nasab</div>
+          <div className="topbar-title">🌳 Sulalah</div>
           <div className="topbar-sub">
             {selfPerson?`Silsilah keluarga ${selfPerson.name} · ${persons.length} anggota`:`${persons.length} anggota keluarga`}
           </div>

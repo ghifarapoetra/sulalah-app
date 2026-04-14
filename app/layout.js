@@ -1,8 +1,8 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Nasab — Pohon Silsilah Keluarga',
-  description: 'Pohon silsilah keluarga dengan deteksi mahram otomatis',
+  title: 'Sulalah — Pohon Silsilah Keluarga',
+  description: 'Pohon silsilah keluarga dengan deteksi mahram otomatis. Jaga nasab, jaga silaturahim.',
 }
 
 export default function RootLayout({ children }) {

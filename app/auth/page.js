@@ -39,10 +39,10 @@ export default function AuthPage() {
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <a href="/" style={{ fontSize: 28, textDecoration: 'none' }}>🌳</a>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--tx)', marginTop: 8, letterSpacing: '-.4px' }}>
-            {mode === 'login' ? 'Masuk ke Nasab' : 'Daftar ke Nasab'}
+            {mode === 'login' ? 'Masuk ke Sulalah' : 'Daftar ke Sulalah'}
           </h1>
           <p style={{ fontSize: 13, color: 'var(--tx2)', marginTop: 4 }}>
-            {mode === 'login' ? 'Lanjutkan silsilah keluarga Anda' : 'Buat akun untuk mulai membangun pohon keluarga'}
+            {mode === 'login' ? 'Lanjutkan silsilah keluarga Anda di Sulalah' : 'Buat akun untuk mulai membangun pohon silsilah'}
           </p>
         </div>
 
