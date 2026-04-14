@@ -1,107 +1,134 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { getMahram, getGeneration } from '../lib/mahram'
+import { getMahram, computeGenerations } from '../lib/mahram'
 
-const NW = 172, NH = 70, HG = 22, VG = 82, PAD = 28
-const ini = n => n.trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?'
+const NW=172,NH=70,HG=28,VG=90,PAD=36
+const ini = n => n.trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?'
 
 function computeLayout(persons) {
-  if (!persons.length) return { positions: {}, gens: [], svgW: 300, svgH: 200 }
-  const map = {}; persons.forEach(p => map[p.id] = p)
-  const cache = {}; persons.forEach(p => getGeneration(p.id, map, cache))
-  const byGen = {}; persons.forEach(p => { const g = cache[p.id]; (byGen[g] = byGen[g] || []).push(p.id) })
-  const gens = Object.keys(byGen).map(Number).sort((a, b) => a - b)
-  let maxN = 0; Object.values(byGen).forEach(ids => { if (ids.length > maxN) maxN = ids.length })
-  const svgW = Math.max(maxN * (NW + HG) - HG + PAD * 2, NW + PAD * 2)
-  const positions = {}
-  gens.forEach(g => {
-    const pcx = id => { const p = map[id]; if (!p) return -1; const xs = [p.father_id, p.mother_id].filter(Boolean).map(x => positions[x]?.cx ?? -1).filter(x => x >= 0); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : -1 }
-    const ids = [...byGen[g]].sort((a, b) => { const ax = pcx(a), bx = pcx(b); if (ax < 0 && bx < 0) return 0; if (ax < 0) return 1; if (bx < 0) return -1; return ax - bx })
-    const rowW = ids.length * NW + (ids.length - 1) * HG
-    const sx = PAD + (svgW - PAD * 2 - rowW) / 2
-    const y = PAD + g * (NH + VG)
-    ids.forEach((id, i) => { const x = sx + i * (NW + HG); positions[id] = { x, y, cx: x + NW / 2 } })
+  if (!persons.length) return { positions:{}, gens:[], svgW:300, svgH:200 }
+  const map={}; persons.forEach(p=>map[p.id]=p)
+  const cache = computeGenerations(persons)
+  const byGen={}; persons.forEach(p=>{ const g=cache[p.id]||0; (byGen[g]=byGen[g]||[]).push(p.id) })
+  const gens=Object.keys(byGen).map(Number).sort((a,b)=>a-b)
+  let maxN=0; Object.values(byGen).forEach(ids=>{ if(ids.length>maxN)maxN=ids.length })
+  const svgW=Math.max(maxN*(NW+HG)-HG+PAD*2, NW+PAD*2)
+  const positions={}
+
+  // Sort nodes: couples stay together
+  gens.forEach(g=>{
+    const ids=[...byGen[g]]
+    // Build couple pairs for this generation
+    const coupleMap={}
+    persons.forEach(p=>{
+      if(p.father_id && p.mother_id && (cache[p.father_id]||0)===g && (cache[p.mother_id]||0)===g) {
+        coupleMap[p.father_id]=p.mother_id
+        coupleMap[p.mother_id]=p.father_id
+      }
+    })
+    // Sort: group couples together, then sort by parent center
+    const pcx = id => {
+      const p=map[id]; if(!p) return -1
+      const xs=[p.father_id,p.mother_id].filter(Boolean).map(x=>positions[x]?.cx??-1).filter(x=>x>=0)
+      return xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : -1
+    }
+    const visited=new Set(), ordered=[]
+    const sorted=[...ids].sort((a,b)=>{ const ax=pcx(a),bx=pcx(b); if(ax<0&&bx<0)return 0; if(ax<0)return 1; if(bx<0)return -1; return ax-bx })
+    sorted.forEach(id=>{
+      if(visited.has(id)) return
+      visited.add(id); ordered.push(id)
+      const partner=coupleMap[id]
+      if(partner && !visited.has(partner) && ids.includes(partner)) {
+        visited.add(partner); ordered.push(partner)
+      }
+    })
+    const rowW=ordered.length*(NW+HG)-HG
+    const sx=PAD+(svgW-PAD*2-rowW)/2
+    const y=PAD+g*(NH+VG)
+    ordered.forEach((id,i)=>{ const x=sx+i*(NW+HG); positions[id]={x,y,cx:x+NW/2} })
   })
-  return { positions, gens, svgW, svgH: Math.max(...gens) * (NH + VG) + NH + PAD * 2 }
+  return { positions, gens, svgW, svgH:Math.max(...gens)*(NH+VG)+NH+PAD*2 }
 }
 
-export default function FamilyTree({ persons, selected, onSelect }) {
-  const containerRef = useRef(null)
+export default function FamilyTree({ persons, selected, onSelect, theme }) {
+  const containerRef=useRef(null)
   const { positions, gens, svgW, svgH } = computeLayout(persons)
   const mah = selected ? getMahram(selected, persons) : null
 
-  useEffect(() => {
-    const ci = containerRef.current
-    if (!ci) return
-    ci.querySelectorAll('.pnode,.gen-label').forEach(e => e.remove())
+  // Line colors based on theme
+  const lc = theme==='dark' ? '#1a4a44' : '#a7f3e8'
+  const lm = theme==='dark' ? '#92400e' : '#f59e0b'
+  const ls = theme==='dark' ? '#235450' : '#5eead4'
 
-    // Gen labels
-    gens.forEach(g => {
-      const lbl = document.createElement('div')
-      lbl.className = 'gen-label'
-      lbl.style.top = (PAD + g * (NH + VG) + NH / 2 - 8) + 'px'
-      lbl.textContent = 'GEN ' + g
-      ci.appendChild(lbl)
+  useEffect(()=>{
+    const ci=containerRef.current; if(!ci) return
+    ci.querySelectorAll('.pnode,.gen-label').forEach(e=>e.remove())
+    gens.forEach(g=>{
+      const lbl=document.createElement('div'); lbl.className='gen-label'
+      lbl.style.top=(PAD+g*(NH+VG)+NH/2-8)+'px'
+      lbl.textContent='GEN '+g; ci.appendChild(lbl)
     })
-
-    // Nodes
-    persons.forEach(p => {
-      const pos = positions[p.id]; if (!pos) return
-      const isSel = selected === p.id, isMah = mah?.all.has(p.id)
-      const d = document.createElement('div')
-      d.className = `pnode ${p.gender}${isSel ? ' selected' : ''}${isMah && !isSel ? ' mahram' : ''}${p.death_year ? ' deceased' : ''}`
-      d.style.left = pos.x + 'px'; d.style.top = pos.y + 'px'
-      const avCls = isSel ? 'node-avatar avatar-sel' : `node-avatar avatar-${p.gender === 'male' ? 'm' : 'f'}`
-      const yr = p.birth_year ? (p.death_year ? `${p.birth_year}–${p.death_year}` : `b.${p.birth_year}`) : ''
-      const badge = p.is_self ? `<div class="node-badge badge-you">● Anda</div>` : isMah && !isSel ? `<div class="node-badge badge-mah">✦ mahram</div>` : isSel ? `<div class="node-badge badge-sel">● dipilih</div>` : ''
-      d.innerHTML = `<div class="${avCls}">${p.photo_url ? `<img src="${p.photo_url}" alt="${p.name}" onerror="this.remove()">` : ''}<span>${ini(p.name)}</span></div><div class="node-info"><div class="node-name">${p.name}</div>${yr ? `<div class="node-year">${yr}</div>` : ''}${badge}</div>`
-      d.onclick = () => onSelect(selected === p.id ? null : p.id)
+    persons.forEach(p=>{
+      const pos=positions[p.id]; if(!pos) return
+      const isSel=selected===p.id, isMah=mah?.all.has(p.id)
+      const d=document.createElement('div')
+      d.className=`pnode ${p.gender}${isSel?' selected':''}${isMah&&!isSel?' mahram':''}${p.death_year?' deceased':''}`
+      d.style.left=pos.x+'px'; d.style.top=pos.y+'px'
+      const avCls=isSel?'node-avatar avatar-sel':`node-avatar avatar-${p.gender==='male'?'m':'f'}`
+      const yr=p.birth_year?(p.death_year?`${p.birth_year}–${p.death_year}`:`b.${p.birth_year}`):'';
+      const badge=p.is_self?`<div class="node-badge badge-you">● Anda</div>`:isMah&&!isSel?`<div class="node-badge badge-mah">✦ mahram</div>`:isSel?`<div class="node-badge badge-sel">● dipilih</div>`:''
+      d.innerHTML=`<div class="${avCls}">${p.photo_url?`<img src="${p.photo_url}" alt="${p.name}" onerror="this.remove()">`:''}<span>${ini(p.name)}</span></div><div class="node-info"><div class="node-name">${p.name}</div>${yr?`<div class="node-year">${yr}</div>`:''}${badge}</div>`
+      d.onclick=()=>onSelect(selected===p.id?null:p.id)
       ci.appendChild(d)
     })
   })
 
-  // SVG lines
-  let lines = `<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>`
-  const couples = new Set()
-  persons.forEach(p => {
-    if (!p.father_id || !p.mother_id) return
-    const key = [p.father_id, p.mother_id].sort().join('|')
-    if (couples.has(key)) return; couples.add(key)
-    const fp = positions[p.father_id], mp = positions[p.mother_id]
-    if (!fp || !mp) return
-    const x1 = Math.min(fp.x + NW, mp.x + NW), x2 = Math.max(fp.x, mp.x)
-    if (x2 > x1) lines += `<line x1="${x1}" y1="${fp.y + NH / 2}" x2="${x2}" y2="${fp.y + NH / 2}" stroke="#5eead4" stroke-width="1" stroke-dasharray="4 3"/>`
+  // Build SVG lines
+  let lines=`<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>`
+  // Couple connector lines
+  const couples=new Set()
+  persons.forEach(p=>{
+    if(!p.father_id||!p.mother_id) return
+    const key=[p.father_id,p.mother_id].sort().join('|')
+    if(couples.has(key)) return; couples.add(key)
+    const fp=positions[p.father_id], mp=positions[p.mother_id]
+    if(!fp||!mp) return
+    const x1=fp.cx+NW/2-NW/2, x2=mp.cx-NW/2+NW/2
+    const lx1=Math.min(fp.x+NW,mp.x+NW), lx2=Math.max(fp.x,mp.x)
+    if(lx2>lx1) lines+=`<line x1="${lx1}" y1="${fp.y+NH/2}" x2="${lx2}" y2="${fp.y+NH/2}" stroke="${ls}" stroke-width="1.5" stroke-dasharray="5 3"/>`
   })
-  persons.forEach(p => {
-    [p.father_id, p.mother_id].filter(Boolean).forEach(par => {
-      if (!positions[par] || !positions[p.id]) return
-      const px = positions[par].cx, py = positions[par].y + NH
-      const cx = positions[p.id].cx, cy = positions[p.id].y, mid = (py + cy) / 2
-      const hi = mah?.all.has(par) || mah?.all.has(p.id)
-      lines += `<path d="M${px},${py} C${px},${mid} ${cx},${mid} ${cx},${cy}" fill="none" stroke="${hi ? '#f59e0b' : '#d1faf4'}" stroke-width="${hi ? 2 : 1}"/>`
+  // Parent→child lines
+  persons.forEach(p=>{
+    [p.father_id,p.mother_id].filter(Boolean).forEach(par=>{
+      if(!positions[par]||!positions[p.id]) return
+      const px=positions[par].cx, py=positions[par].y+NH
+      const cx=positions[p.id].cx, cy=positions[p.id].y, mid=(py+cy)/2
+      const hi=mah?.all.has(par)||mah?.all.has(p.id)
+      lines+=`<path d="M${px},${py} C${px},${mid} ${cx},${mid} ${cx},${cy}" fill="none" stroke="${hi?lm:lc}" stroke-width="${hi?2.5:1.5}"/>`
     })
   })
 
-  const self = persons.find(p => p.is_self)
+  const self=persons.find(p=>p.is_self)
 
   return (
     <div>
-      <div style={{ overflow: 'auto', height: 420, border: '1px solid var(--bd)', borderRadius: 12, background: 'var(--surf)', position: 'relative' }}>
-        <div ref={containerRef} style={{ position: 'relative', width: svgW, height: svgH }}>
-          <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'visible' }} dangerouslySetInnerHTML={{ __html: lines }} />
+      <div className="print-title">{self?`Silsilah Keluarga ${self.name}`:''}</div>
+      <div className="print-sub">Dicetak dari nasab-app.vercel.app</div>
+      <div id="cw" style={{ overflow:'auto',height:420,border:'1px solid var(--bd)',borderRadius:12,background:'var(--surf)',position:'relative' }}>
+        <div id="ci" ref={containerRef} style={{ position:'relative',width:svgW,height:svgH }}>
+          <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ position:'absolute',top:0,left:0,pointerEvents:'none',overflow:'visible' }} dangerouslySetInnerHTML={{ __html:lines }} />
         </div>
       </div>
-
-      <div style={{ marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 10, color: 'var(--tx3)', alignItems: 'center' }}>
-        {[['var(--t4)', 'Laki-laki'], ['var(--rose-t)', 'Perempuan'], ['var(--amber-t)', 'Mahram']].map(([c, l]) => (
-          <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: c, display: 'inline-block' }}></span>{l}
+      <div style={{ marginTop:8,display:'flex',gap:12,flexWrap:'wrap',fontSize:10,color:'var(--tx3)',alignItems:'center' }}>
+        {[['var(--t4)','Laki-laki'],['var(--rose-t)','Perempuan'],['var(--amber-t)','Mahram']].map(([c,l])=>(
+          <span key={l} style={{ display:'flex',alignItems:'center',gap:4 }}>
+            <span style={{ width:8,height:8,borderRadius:'50%',background:c,display:'inline-block' }}></span>{l}
           </span>
         ))}
-        <span style={{ opacity: .5, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--tx3)', display: 'inline-block' }}></span>Almarhum/ah
+        <span style={{ opacity:.5,display:'flex',alignItems:'center',gap:4 }}>
+          <span style={{ width:8,height:8,borderRadius:'50%',background:'var(--tx3)',display:'inline-block' }}></span>Almarhum/ah
         </span>
-        <span style={{ marginLeft: 'auto' }}>Klik untuk detail · Scroll untuk geser</span>
+        <span style={{ marginLeft:'auto' }}>Klik untuk detail · Scroll untuk geser</span>
       </div>
     </div>
   )
