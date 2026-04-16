@@ -122,7 +122,18 @@ export default function TreePage() {
 
   return (
     <main style={{ maxWidth:960,margin:'0 auto',padding:'0 16px 40px' }}>
-      <div className="topbar no-print" style={{ borderRadius:'0 0 14px 14px',marginBottom:16 }}>
+      <div className="print-header" style={{ display:'none',marginBottom:12 }}>
+        <div>
+          <div className="print-title" style={{ display:'none',color:'#0d9488',fontSize:22,fontWeight:800 }}>🌳 {tree?.name}</div>
+          <div className="print-sub" style={{ display:'none',color:'#666',fontSize:11 }}>Silsilah keluarga · {persons.length} anggota · sulalah.my.id</div>
+        </div>
+        <div style={{ textAlign:'right',fontSize:10,color:'#999' }}>
+          <div style={{ fontWeight:700,fontSize:13 }}>Sulalah</div>
+          <div>سُلالة — Pohon Silsilah Islam</div>
+        </div>
+      </div>
+      <div className="print-watermark" style={{ display:'none' }}>sulalah.my.id</div>
+    <div className="topbar no-print" style={{ borderRadius:'0 0 14px 14px',marginBottom:16 }}>
         <div style={{ display:'flex',alignItems:'center',gap:10 }}>
           <button onClick={()=>router.push('/dashboard')} style={{ background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.3)',padding:'5px 10px',borderRadius:20,fontSize:12,cursor:'pointer' }}>← Semua Pohon</button>
           <div>
