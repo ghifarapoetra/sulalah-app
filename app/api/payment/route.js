@@ -54,8 +54,11 @@ export async function POST(req) {
     const midtransData = await midtransRes.json()
 
     if (!midtransData.token) {
-      console.error('Midtrans error:', midtransData)
-      return NextResponse.json({ error: 'Midtrans gagal membuat transaksi' }, { status: 500 })
+      console.error('Midtrans error:', JSON.stringify(midtransData))
+      return NextResponse.json({ 
+        error: 'Midtrans gagal membuat transaksi',
+        detail: midtransData
+      }, { status: 500 })
     }
 
     // Simpan ke database Supabase (gunakan service role)

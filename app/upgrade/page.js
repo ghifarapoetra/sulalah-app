@@ -63,7 +63,7 @@ export default function UpgradePage() {
         body: JSON.stringify({ userId: user.id, userEmail: user.email, userName: profile?.full_name || '' }),
       })
       const data = await res.json()
-      if (data.error) { setErr('Gagal memulai pembayaran. Coba lagi.'); setPaying(false); return }
+      if (data.error) { setErr(`Gagal: ${data.detail?.error_messages?.[0] || data.error}`); setPaying(false); return }
       if (window.snap) {
         window.snap.pay(data.token, {
           onSuccess: () => router.push('/payment-success'),
