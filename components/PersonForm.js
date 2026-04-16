@@ -143,7 +143,7 @@ export default function PersonForm({ person, persons, onSave, onDelete, onCancel
         {/* Field khusus kalau sudah wafat */}
         {isDeceased && (
           <div className="field" style={{ gridColumn:'1/-1' }}>
-            <label>☪ Catatan untuk Almarhum/ah <span style={{ color:'var(--tx3)',fontWeight:400' }}>(tampil di panel peringatan)</span></label>
+            <label>☪ Catatan untuk Almarhum/ah <span style={{ color:'var(--tx3)',fontWeight:400 }}>(tampil di panel peringatan)</span></label>
             <textarea value={form.wafat_notes} onChange={e=>set('wafat_notes',e.target.value)} placeholder="mis. Beliau adalah sosok yang penuh kasih, selalu mengajarkan kami untuk rajin shalat dan berbakti..." style={{ minHeight:80 }} />
           </div>
         )}
