@@ -46,10 +46,8 @@ export default function TreePage() {
     const { data: treeData } = await supabase.from('trees').select('*, profiles(full_name)').eq('id', treeId).single()
     if (!treeData) { router.push('/dashboard'); return }
     setTree({ ...treeData, owner_name: treeData.profiles?.full_name })
-
     const { data: profileData } = await supabase.from('profiles').select('is_premium, full_name').eq('id', uid).single()
     setProfile(profileData)
-
     if (treeData.owner_id === uid) setUserRole('owner')
     else {
       const { data: mem } = await supabase.from('tree_members').select('role').eq('tree_id', treeId).eq('user_id', uid).single()
@@ -144,6 +142,7 @@ export default function TreePage() {
         <PdfThemeModal
           treeName={tree?.name}
           memberCount={persons.length}
+          persons={persons}
           isPremium={profile?.is_premium || false}
           onClose={()=>setShowPdfModal(false)}
         />
