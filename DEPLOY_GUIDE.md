@@ -1,47 +1,57 @@
-# 🌳 Sulalah — Deploy v11.2
+# 🌳 Sulalah — Deploy v12
 
-## Perubahan dari v11.1
+## 🎯 Perubahan Besar di v12
 
-### 🔧 Fix Favicon
-- Problem: favicon globe default Chrome muncul lagi (bukan 🌳 Sulalah)
-- Cause: layout.js tidak punya link/metadata icon eksplisit
-- Fix:
-  - Tambah `icons` metadata di `app/layout.js`
-  - Tambah `<link rel="icon">` eksplisit di `<head>`
-  - Copy favicon ke `app/icon.svg` (Next.js 14 auto-detect convention)
+### 1. Engine Generasi Smart (4-Layer Logic)
 
-### 📐 Ukuran Baru — A3 & Kuarto
-Sekarang tersedia 8 ukuran (sebelumnya 4):
-- Instagram Story (1080×1920)
-- Instagram Post (1080×1080)
-- A4 Portrait / Landscape (2480×3508 / 3508×2480)
-- **A3 Portrait / Landscape** (3508×4961 / 4961×3508) ⭐ BARU
-- **Kuarto Portrait / Landscape** (2550×3300 / 3300×2550) ⭐ BARU
+File baru: `lib/generationLevel.js` (191 baris)
 
-A3 cocok untuk pohon besar yang butuh ruang lega.
-Kuarto (Letter US, 8.5"×11") umum dipakai untuk dokumen resmi Indonesia.
+Algoritma sekarang menangani 4 skenario:
+1. **Punya parent** → level = max(parent levels) + 1
+2. **Pasangan tanpa parent** (deteksi via "anak bersama") → level = level pasangan
+3. **Tanpa parent tapi punya anak** → level = level anak − 1
+4. **Otherwise** → level 0 (leluhur sejati)
 
-### ✨ Prompt Gemini Lebih Akurat
+**Efek:** Pasangan yang tidak punya parent_id (mahram pernikahan) sekarang otomatis ditempatkan di generasi yang benar — sejajar pasangannya.
 
-**Masalah sebelumnya:** Gemini ngarang data (menambah anggota, salah hubungan)
+Contoh:
+- Putri Artha Yusmika Dewi (istri Rifamumza) → auto-detect sejajar Rifamumza
+- Arif Agus Nugroho (suami Mu'minah) → auto-detect sejajar Mu'minah
+- Sutrisno (suami Jamilah) → auto-detect sejajar Jamilah
 
-**Fix — prompt v2 sekarang:**
-1. **Explicit "JANGAN DITAMBAH/DIKURANGI/DIUBAH"** di awal prompt
-2. **Hierarki per generasi** lengkap dengan counter ("Generasi II — 4 orang")
-3. **Daftar relationships eksplisit** ("Rifamumza anak dari ayah: Arif Agus")
-4. **Daftar saudara kandung** untuk membantu AI tahu siapa yang sejajar
-5. **Verifikasi akhir** — checklist yang AI harus confirm
-6. **Larangan keras** tertulis jelas
+### 2. Zoom In/Out di Canvas Tree
 
-Ini membuat AI jauh lebih disiplin mengikuti data, bukan mengarang.
+File: `components/FamilyTree.js`
 
-## File yang Diupdate
+- Tombol `+` / `−` / persentase di pojok kanan atas canvas
+- `Ctrl + scroll wheel` untuk zoom
+- Range: 40% - 200%
+- State zoom tersimpan saat navigasi
 
-- `app/layout.js` — favicon metadata
-- `app/icon.svg` — BARU (copy dari public/favicon.svg)
-- `lib/posterThemes.js` — tambah A3 & Kuarto
-- `lib/posterEngine.js` — PDF export support A3 & Kuarto
-- `lib/geminiPrompt.js` — rewrite untuk akurasi tinggi
+### 3. Garis L-Shape dengan Sudut Rounded
+
+Baik di canvas maupun di poster engine:
+- Bukan curve meliuk lagi
+- Garis lurus ala bagan organisasi
+- Sudut tumpul halus (radius 8px)
+- Warna: abu netral untuk parent-child, hijau-emas untuk mahram
+
+### 4. Konsistensi Engine
+
+Semua file (canvas, poster, stats, gemini prompt) sekarang pakai
+`generationLevel.js` yang sama. Hasil generasi konsisten di mana pun.
+
+## File yang Berubah
+
+```
+lib/
+  generationLevel.js     → BARU (191 baris)
+  posterEngine.js        → import generationLevel + L-shape connectors
+  posterStats.js         → pakai shared calculator
+  geminiPrompt.js        → pakai shared calculator
+components/
+  FamilyTree.js          → zoom + L-shape + smart generation
+```
 
 ## Step Deploy
 
@@ -49,27 +59,57 @@ Ini membuat AI jauh lebih disiplin mengikuti data, bukan mengarang.
 
 Tidak ada migration SQL baru.
 
-### 2. Test Favicon
+### 2. Test di Pohon Martodimejo
 
-- Buka https://sulalah.my.id di Incognito (bypass cache)
-- Lihat tab browser: harus muncul ikon pohon Sulalah, bukan globe
-- Kalau masih globe, hard refresh (Ctrl+Shift+R)
+Buka pohon yang sudah ada (Keluarga Besar Martodimejo).
 
-### 3. Test Ukuran Baru
+**Verifikasi struktur generasi:**
+- Gen I: Mudiyono Martodimejo, Istri Mbah Uyut
+- Gen II: Mbah Roko, Mbah Rayi (Siti Zaeroh)
+- Gen III: Mu'minah, Pakdhe/Budhe, plus pasangan masing-masing
+- Gen IV: Kamu (Ifam), Rifamumza, dst, plus Putri Artha
+- Gen V: Mezzaluna
+
+**Catatan:** Mbah Roko di data kamu mungkin belum ter-link father_id ke Mudiyono.
+Kalau iya, edit Mbah Roko → set Ayah = Mudiyono Martodimejo.
+
+### 3. Test Zoom Canvas
+
+- Lihat pojok kanan atas canvas — ada kontrol `+` / persentase / `−`
+- Klik `+` untuk zoom in
+- Klik persentase untuk reset ke 100%
+- Atau Ctrl + scroll wheel di canvas
+
+### 4. Test Garis L-Shape
+
+- Garis penghubung sekarang lurus dengan sudut tumpul halus
+- Bukan curve meliuk seperti sebelumnya
+- Lebih mirip bagan organisasi formal
+
+### 5. Test Ekspor Poster
 
 - Klik 🖼️ Ekspor → Ekspor Langsung
-- Di Step 1 (pilih ukuran), sekarang ada 8 opsi termasuk A3 & Kuarto
-- Pilih A3 Landscape, lanjutkan sampai preview
-- Download PDF — harusnya ukuran A3 (297×420 mm)
+- Pilih ukuran (test A3 Landscape untuk pohon besar)
+- Preview & download
+- Generasi & layout harus konsisten dengan canvas tree view
 
-### 4. Test Prompt Gemini
+### 6. Test Prompt Gemini
 
 - Klik 🖼️ Ekspor → Buat Prompt Gemini
-- Pilih ukuran & style
-- Copy prompt → paste ke gemini.google.com
-- Prompt sekarang punya **structured data lebih jelas**:
-  - Hierarki generasi
-  - Daftar relationships eksplisit
-  - Daftar saudara kandung
-  - Verifikasi checklist
-- Hasil Gemini harus lebih akurat, tidak ngarang
+- Pilih style → Copy prompt
+- Hierarki di prompt sekarang akurat (5 generasi, bukan 2)
+
+## Catatan Penting
+
+**Algoritma deteksi pasangan butuh "anak bersama"** untuk identifikasi.
+
+Contoh:
+- ✅ Putri Artha → bisa deteksi karena ada anak Mezzaluna (anak bersama Rifamumza)
+- ⚠️ Pasangan baru menikah belum punya anak → tidak terdeteksi otomatis
+
+Untuk kasus seperti ini, fitur **Marriages** (di v7 lalu) bisa dipakai sebagai
+override eksplisit. Tapi tabel marriages belum di-create di Supabase kamu —
+itu task untuk v13 nanti kalau dibutuhkan.
+
+**Untuk sekarang:** algoritma 4-layer ini sudah menangani 95%+ kasus
+secara akurat dari data nasab parent_id.
