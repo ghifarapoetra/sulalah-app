@@ -78,10 +78,12 @@ export default function TreePage() {
 
     let savedPersonId = editPerson?.id
     if (editPerson) {
-      await supabase.from('persons').update(payload).eq('id', editPerson.id)
+      const { error: updateErr } = await supabase.from('persons').update(payload).eq('id', editPerson.id)
+      if (updateErr) { console.error('Update error:', updateErr); return }
     } else {
-      const { data: inserted } = await supabase.from('persons').insert(payload).select('id').single()
-      savedPersonId = inserted?.id
+      const { data: inserted, error: insertErr } = await supabase.from('persons').insert(payload).select('id').single()
+      if (insertErr || !inserted) { console.error('Insert error:', insertErr); return }
+      savedPersonId = inserted.id
     }
 
     // Save marriage if spouse selected
