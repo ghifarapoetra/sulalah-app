@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '../../../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 const PREMIUM_PRICE = 29000
+
+// Pakai service role key — bypass RLS, khusus server-side webhook
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  )
+}
 
 export async function POST(req) {
   try {
     const body = await req.json()
     console.log('[pakasir-webhook] received:', JSON.stringify(body))
 
-    const { order_id, amount, status, project, payment_method, completed_at } = body
+    const { order_id, amount, status, payment_method, completed_at } = body
 
     // Validasi field wajib
     if (!order_id || !amount || !status) {
@@ -17,56 +25,59 @@ export async function POST(req) {
 
     // Hanya proses jika status completed
     if (status !== 'completed') {
-      console.log('[pakasir-webhook] status bukan completed, skip:', status)
       return NextResponse.json({ ok: true, skipped: true })
     }
 
-    // Validasi amount (harus sama dengan harga premium)
+    // Validasi amount
     if (parseInt(amount) < PREMIUM_PRICE) {
-      console.warn('[pakasir-webhook] amount tidak sesuai:', amount, 'expected:', PREMIUM_PRICE)
+      console.warn('[pakasir-webhook] amount mismatch:', amount)
       return NextResponse.json({ error: 'Amount mismatch' }, { status: 400 })
     }
 
-    // Extract userId dari order_id format: SULALAH-{userId}-{timestamp}
+    // Extract userId dari order_id: SULALAH-{uuid}-{timestamp}
+    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (5 segmen)
+    // Split: ['SULALAH', seg1, seg2, seg3, seg4, seg5, timestamp]
     const parts = order_id.split('-')
-    // order_id: SULALAH-{uuid dengan banyak dash}-{timestamp}
-    // UUID punya format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (5 bagian)
-    // Jadi total: SULALAH + 5 bagian UUID + timestamp = index 0 adalah "SULALAH", 1-5 adalah UUID, 6 adalah timestamp
     if (parts.length < 3 || parts[0] !== 'SULALAH') {
-      console.error('[pakasir-webhook] format order_id tidak valid:', order_id)
-      return NextResponse.json({ error: 'Invalid order_id format' }, { status: 400 })
+      console.error('[pakasir-webhook] invalid order_id:', order_id)
+      return NextResponse.json({ error: 'Invalid order_id' }, { status: 400 })
     }
-
-    // Reconstruct userId (UUID): bagian index 1 s/d (length - 2)
+    // userId = index 1 sampai length-2 (buang 'SULALAH' depan & timestamp belakang)
     const userId = parts.slice(1, parts.length - 1).join('-')
-    console.log('[pakasir-webhook] extracted userId:', userId)
+    console.log('[pakasir-webhook] userId:', userId)
 
-    const supabase = createClient()
+    const supabase = getAdminClient()
 
-    // Cek apakah order sudah pernah diproses (idempotency)
-    const { data: existingOrder } = await supabase
-      .from('payment_orders')
-      .select('id, status')
-      .eq('order_id', order_id)
-      .maybeSingle()
+    // Idempotency: cek apakah sudah diproses
+    try {
+      const { data: existing } = await supabase
+        .from('payment_orders')
+        .select('id, status')
+        .eq('order_id', order_id)
+        .maybeSingle()
 
-    if (existingOrder?.status === 'completed') {
-      console.log('[pakasir-webhook] order sudah diproses sebelumnya, skip')
-      return NextResponse.json({ ok: true, already_processed: true })
+      if (existing?.status === 'completed') {
+        console.log('[pakasir-webhook] already processed, skip')
+        return NextResponse.json({ ok: true, already_processed: true })
+      }
+
+      // Simpan/update order
+      await supabase.from('payment_orders').upsert({
+        order_id,
+        user_id: userId,
+        amount: parseInt(amount),
+        status: 'completed',
+        gateway: 'pakasir',
+        payment_method: payment_method || 'unknown',
+        completed_at: completed_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'order_id' })
+    } catch (tableErr) {
+      // Tabel payment_orders belum ada (migration belum dijalankan) — tidak block upgrade
+      console.warn('[pakasir-webhook] payment_orders table error (migration pending?):', tableErr.message)
     }
 
-    // Update payment_orders ke completed
-    await supabase.from('payment_orders').upsert({
-      order_id,
-      user_id: userId,
-      amount: parseInt(amount),
-      status: 'completed',
-      gateway: 'pakasir',
-      payment_method: payment_method || 'unknown',
-      completed_at: completed_at || new Date().toISOString(),
-    }, { onConflict: 'order_id' })
-
-    // Upgrade user ke Premium
+    // Upgrade user ke Premium — ini yang paling penting
     const { error: upgradeError } = await supabase
       .from('profiles')
       .update({
@@ -77,15 +88,15 @@ export async function POST(req) {
       .eq('id', userId)
 
     if (upgradeError) {
-      console.error('[pakasir-webhook] gagal upgrade premium:', upgradeError)
-      return NextResponse.json({ error: 'Failed to upgrade' }, { status: 500 })
+      console.error('[pakasir-webhook] upgrade error:', upgradeError)
+      return NextResponse.json({ error: 'Upgrade failed: ' + upgradeError.message }, { status: 500 })
     }
 
-    console.log('[pakasir-webhook] ✅ user', userId, 'berhasil di-upgrade ke Premium')
-    return NextResponse.json({ ok: true, userId, upgraded: true })
+    console.log('[pakasir-webhook] ✅ upgraded userId:', userId)
+    return NextResponse.json({ ok: true, upgraded: true })
 
   } catch (err) {
-    console.error('[pakasir-webhook] error:', err)
+    console.error('[pakasir-webhook] unexpected error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

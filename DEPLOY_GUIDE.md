@@ -1,110 +1,87 @@
-# 🌳 Sulalah — Deploy v13 (Pakasir Payment)
+# 🌳 Sulalah v13 — Panduan Deploy Pakasir
 
-## Perubahan di v13
+## Checklist Sebelum Deploy
 
-Ganti sistem payment dari Trakteer (manual) ke **Pakasir** (auto-upgrade via webhook).
+### 1. Supabase — Tambah kolom & tabel baru
 
-### Flow Baru
+Buka **Supabase → SQL Editor**, paste dan jalankan isi file `migration-v13.sql`.
+
+Yang dibuat oleh migration ini:
+- Tabel `payment_orders` untuk mencatat semua transaksi
+- Kolom `premium_source` dan `premium_since` di tabel `profiles`
+
+### 2. Vercel — Tambah 3 Environment Variables
+
+Buka **Vercel → Project → Settings → Environment Variables**, tambahkan:
+
+**PAKASIR_PROJECT_SLUG**
 ```
-User klik "Upgrade" 
-  → /api/pakasir-create → buat order_id unik
-  → Redirect ke halaman bayar Pakasir (QRIS/VA/e-wallet)
-  → User bayar
-  → Pakasir kirim webhook ke /api/pakasir-webhook
-  → Webhook auto-upgrade profiles.is_premium = true
-  → User redirect ke /payment-success
-  → Polling cek status premium (max 60 detik)
-  → Tampil "Upgrade Berhasil" 🌟
-```
-
-## 🚨 WAJIB: 2 Steps Sebelum Deploy
-
-### Step 1 — Supabase Migration
-
-Buka Supabase → SQL Editor → paste & run `migration-v13.sql`
-
-Isi migration:
-- Buat tabel `payment_orders` (audit trail semua transaksi)
-- Tambah kolom `premium_source` dan `premium_since` di `profiles`
-- RLS policies untuk payment_orders
-
-### Step 2 — Vercel Environment Variables
-
-Buka Vercel → Settings → Environment Variables → tambah 2 variabel:
-
-```
-PAKASIR_PROJECT_SLUG = sulalah-pohon-nasab
-PAKASIR_API_KEY      = [API Key dari dashboard Pakasir — tombol Copy]
+sulalah-pohon-nasab
 ```
 
-Pastikan set untuk **Production** (dan Preview kalau mau test).
-
-## Deploy
-
-Push ZIP ke GitHub → Vercel auto deploy.
-
-## Testing (Sandbox Mode)
-
-Pakasir kamu masih di mode Sandbox. Urutan test:
-
-### 1. Buka halaman upgrade
-- Login ke Sulalah → `/upgrade`
-- Klik **"Upgrade Sekarang — Rp 29.000"**
-- Harus redirect ke halaman Pakasir
-
-### 2. Simulasi pembayaran (dari dashboard Pakasir)
-- Buka dashboard Pakasir → Transaksi
-- Cari transaksi yang baru dibuat
-- Klik **"Simulasi Pembayaran"**
-
-### 3. Cek webhook diterima
-- Buka Pakasir → Webhook Log
-- Harus ada entry baru dengan status 200
-
-### 4. Cek akun ter-upgrade
-- Kembali ke Sulalah `/payment-success`
-- Atau cek `/dashboard` → harus sudah Premium
-
-### 5. Tes via curl (opsional)
-```bash
-curl -X POST https://app.pakasir.com/api/paymentsimulation \
-  -H "Content-Type: application/json" \
-  -d '{
-    "project": "sulalah-pohon-nasab",
-    "order_id": "SULALAH-{userId}-{timestamp}",
-    "amount": 29000,
-    "api_key": "YOUR_API_KEY"
-  }'
+**PAKASIR_API_KEY**
+```
+(copy dari dashboard Pakasir → detail proyek → bagian Integrasi → tombol Copy di sebelah API Key)
 ```
 
-## Setelah Lulus Testing
-
-1. Buka dashboard Pakasir → proyek → **Edit Proyek**
-2. Ubah Mode dari **Sandbox** ke **Production**
-3. Lengkapi KYC Pakasir (kalau belum) untuk bisa withdraw
-
-## File yang Berubah
-
+**SUPABASE_SERVICE_ROLE_KEY**
 ```
-migration-v13.sql                    → BARU (wajib run)
-app/
-  upgrade/page.js                    → Ganti Trakteer → Pakasir button
-  payment-success/page.js            → Polling upgrade status
-  api/
-    pakasir-create/route.js          → BARU: buat transaksi
-    pakasir-webhook/route.js         → BARU: terima notifikasi auto-upgrade
+(copy dari Supabase → Project Settings → API → Project API keys → service_role → Reveal → Copy)
 ```
 
-## Catatan Penting
+Pastikan ketiga variabel di-set untuk environment **Production**.
 
-**idempotency:** Webhook bisa dikirim lebih dari sekali oleh Pakasir.
-Kode sudah handle ini — cek `payment_orders.status` sebelum upgrade.
+### 3. Push ke GitHub → Vercel auto deploy
 
-**order_id format:** `SULALAH-{uuid}-{timestamp}`
-Webhook mengekstrak userId dari order_id untuk upgrade profil yang tepat.
+---
 
-**Fee:** Pakasir memotong fee dari setiap transaksi (lihat dashboard).
-Untuk QRIS biasanya ~0.7%.
+## Cara Test (Sandbox Mode)
 
-**Trakteer:** Webhook Trakteer (`/api/trakteer-webhook`) masih ada dan tetap berfungsi
-untuk supporter lama yang mungkin masih transaksikan via Trakteer.
+Pakasir kamu masih Sandbox — aman untuk test tanpa uang sungguhan.
+
+**Step 1 — Coba alur upgrade**
+
+Login ke Sulalah dengan akun yang belum Premium, buka `/upgrade`, klik tombol Upgrade. Browser harus pindah ke halaman pembayaran Pakasir.
+
+**Step 2 — Simulasi pembayaran**
+
+Jangan bayar sungguhan. Kembali ke dashboard Pakasir → menu Transaksi → cari transaksi yang baru muncul → klik **Simulasi Pembayaran**.
+
+**Step 3 — Verifikasi webhook**
+
+Buka Pakasir → **Webhook Log**. Harus ada entry baru dengan response **200**. Kalau masih bukan 200, cek Vercel → Functions → Logs untuk lihat error detail.
+
+**Step 4 — Verifikasi akun ter-upgrade**
+
+Buka Sulalah, refresh halaman `/dashboard`. Status akun harus sudah berubah jadi **Premium**.
+
+---
+
+## Setelah Testing Berhasil
+
+Buka dashboard Pakasir → detail proyek → **Edit Proyek** → ubah Mode dari **Sandbox** ke **Production**.
+
+Lengkapi juga KYC di Pakasir (menu KYC) agar bisa melakukan penarikan dana.
+
+---
+
+## Troubleshooting
+
+**Tombol upgrade muncul "Unauthorized"**
+Pastikan `SUPABASE_SERVICE_ROLE_KEY` sudah di-set di Vercel dan sudah redeploy setelah menambahkannya.
+
+**Webhook Log di Pakasir tidak muncul 200**
+Cek Vercel → Functions → Logs → cari `/api/pakasir-webhook`. Baca pesan error-nya. Paling sering karena `SUPABASE_SERVICE_ROLE_KEY` belum di-set.
+
+**Akun tidak ter-upgrade meski webhook 200**
+Cek apakah migration v13 sudah dijalankan di Supabase. Kalau tabel `payment_orders` belum ada, upgrade tetap jalan tapi ada warning di log.
+
+**Build error di Vercel**
+Pastikan tidak ada folder `sulalah-v6/` di dalam repo. Struktur yang benar: `app/`, `components/`, `lib/` langsung di root repo, bukan di dalam subfolder.
+
+---
+
+## Catatan
+
+Webhook Trakteer lama (`/api/trakteer-webhook`) tetap aktif dan tidak terganggu. User yang sudah Premium via Trakteer tidak perlu melakukan apapun.
+
