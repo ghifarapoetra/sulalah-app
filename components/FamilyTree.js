@@ -128,7 +128,7 @@ export default function FamilyTree({ persons, selected, onSelect, theme, treeNam
       d.onclick=()=>onSelect(selected===p.id?null:p.id)
       ci.appendChild(d)
     })
-  }, [persons, marriages, selected, positions, gens, mah, onSelect])
+  })
 
   // Build SVG lines — ORIGINAL CURVE STYLE (restored)
   let lines=`<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>`

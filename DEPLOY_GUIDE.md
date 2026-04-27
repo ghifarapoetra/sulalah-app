@@ -1,130 +1,110 @@
-# 🌳 Sulalah — Deploy v12 (Final)
+# 🌳 Sulalah — Deploy v13 (Pakasir Payment)
 
-## 📋 Ringkasan Perubahan
+## Perubahan di v13
 
-### 1. 📍 Field Alamat
-Tambah kolom `address` di tabel `persons`. Muncul sebagai textarea di form edit profil.
+Ganti sistem payment dari Trakteer (manual) ke **Pakasir** (auto-upgrade via webhook).
 
-### 2. 🔤 Dropdown Urut Abjad
-Dropdown **Ayah**, **Ibu**, **Pasangan** semuanya sekarang diurut alphabetical (localeCompare ID).
-Label dropdown menunjukkan jumlah kandidat: "Ayah (5)", "Ibu (8)", dll.
-
-### 3. 💍 Dropdown Pasangan (Fitur Baru)
-Di form edit profil, tambah selector "Pasangan (Istri/Suami)":
-- Auto-filter berdasarkan gender opposite
-- Urut alphabetical
-- Pilih & save → otomatis insert ke tabel `marriages`
-- Kalau sudah punya pasangan → tampil sebagai card dengan tombol "Lepas"
-- Tombol lepas → hapus record marriage (tidak hapus person)
-
-### 4. 🎨 Garis Canvas Dibalikin ke Curve Original
-Feedback: L-shape rounded kurang oke. Sekarang garis kembali ke **bezier curve lembut** seperti versi awal. Warna & ketebalan original juga dipulihkan.
-
-### 5. 📸 Ekspor Pakai Screenshot Canvas (Major Change)
-Insight dari tester: hasil screenshot jauh lebih akurat dari engine custom.
-
-Sekarang **Ekspor Langsung** menggunakan `html2canvas`:
-- Capture canvas tree yang sudah ter-render
-- Tambahkan header (nama pohon, tanggal, penyusun)
-- Tambahkan footer (stats: total anggota, generasi, rentang tahun)
-- Tambahkan watermark sulalah.my.id
-- Export PNG atau PDF dengan ukuran A3/A4/Kuarto/IG
-
-**Kelebihan:** hasil **pasti sesuai** dengan yang terlihat di canvas. Tidak ada lagi generasi yang salah posisi.
-
-### 6. 🔍 Zoom di Canvas (dari v12-draft)
-Tombol `+` / `%` / `−` di pojok kanan atas canvas + Ctrl+Scroll. Range 40% - 200%.
-
-### 7. 🧠 Engine Generasi Smart Support Marriages
-`calculateGenerationLevels()` sekarang menerima parameter `marriages`:
-- Layer 1: parent → level
-- Layer 2: pasangan via marriages table **ATAU** shared children
-- Layer 3: punya anak
-- Layer 4: leluhur sejati
-
-## 🚨 WAJIB: Jalankan Migration
-
-File: `migration-v12.sql`
-
-Isi:
-1. Tambah kolom `address` ke `persons`
-2. **Create table `marriages`** (ternyata belum ada di Supabase kamu, meskipun di-mention di v7)
-3. RLS policies untuk marriages
-
-Jalankan di Supabase SQL Editor SEBELUM deploy.
-
-## 📦 Install Dependency Baru
-
-`html2canvas` ditambahkan di package.json.
-
-Vercel akan auto-install saat build. Kalau development lokal:
-```bash
-npm install
+### Flow Baru
+```
+User klik "Upgrade" 
+  → /api/pakasir-create → buat order_id unik
+  → Redirect ke halaman bayar Pakasir (QRIS/VA/e-wallet)
+  → User bayar
+  → Pakasir kirim webhook ke /api/pakasir-webhook
+  → Webhook auto-upgrade profiles.is_premium = true
+  → User redirect ke /payment-success
+  → Polling cek status premium (max 60 detik)
+  → Tampil "Upgrade Berhasil" 🌟
 ```
 
-## Step Deploy
+## 🚨 WAJIB: 2 Steps Sebelum Deploy
 
-### 1. Run Migration
-Buka Supabase → SQL Editor → paste isi `migration-v12.sql` → Run
+### Step 1 — Supabase Migration
 
-### 2. Push ZIP ke GitHub → Vercel auto deploy
+Buka Supabase → SQL Editor → paste & run `migration-v13.sql`
 
-### 3. Test Scenario
+Isi migration:
+- Buat tabel `payment_orders` (audit trail semua transaksi)
+- Tambah kolom `premium_source` dan `premium_since` di `profiles`
+- RLS policies untuk payment_orders
 
-**A. Test Form Alamat:**
-- Edit profil → scroll ke "📍 Alamat"
-- Isi alamat → Save
-- Buka lagi → alamat tersimpan
+### Step 2 — Vercel Environment Variables
 
-**B. Test Dropdown Urut Abjad:**
-- Edit profil → lihat dropdown Ayah/Ibu
-- Nama-nama harus urut A-Z
+Buka Vercel → Settings → Environment Variables → tambah 2 variabel:
 
-**C. Test Dropdown Pasangan:**
-- Edit profil Rifamumza → scroll ke "💍 Pasangan"
-- Pilih "Putri Artha Yusmika Dewi" → Save
-- Edit lagi Rifamumza → sekarang tampil card "💖 Putri Artha" dengan tombol Lepas
-- Di canvas, Putri Artha akan sejajar dengan Rifamumza (Gen IV)
+```
+PAKASIR_PROJECT_SLUG = sulalah-pohon-nasab
+PAKASIR_API_KEY      = [API Key dari dashboard Pakasir — tombol Copy]
+```
 
-**D. Test Canvas:**
-- Garis koneksi kembali curve halus (bukan L-shape)
-- Zoom tombol di pojok kanan atas canvas
-- Ctrl + Scroll wheel di canvas → zoom
+Pastikan set untuk **Production** (dan Preview kalau mau test).
 
-**E. Test Ekspor:**
-- 🖼️ Ekspor → Ekspor Langsung
-- Pilih ukuran (A3 Landscape cocok untuk pohon besar)
-- Preview → hasilnya screenshot canvas + header/footer Sulalah
-- Download PNG atau PDF
+## Deploy
 
-**F. Test Gemini Prompt:**
-- 🖼️ Ekspor → Buat Prompt Gemini
-- Prompt sekarang pakai data marriages juga untuk hierarki yang akurat
+Push ZIP ke GitHub → Vercel auto deploy.
+
+## Testing (Sandbox Mode)
+
+Pakasir kamu masih di mode Sandbox. Urutan test:
+
+### 1. Buka halaman upgrade
+- Login ke Sulalah → `/upgrade`
+- Klik **"Upgrade Sekarang — Rp 29.000"**
+- Harus redirect ke halaman Pakasir
+
+### 2. Simulasi pembayaran (dari dashboard Pakasir)
+- Buka dashboard Pakasir → Transaksi
+- Cari transaksi yang baru dibuat
+- Klik **"Simulasi Pembayaran"**
+
+### 3. Cek webhook diterima
+- Buka Pakasir → Webhook Log
+- Harus ada entry baru dengan status 200
+
+### 4. Cek akun ter-upgrade
+- Kembali ke Sulalah `/payment-success`
+- Atau cek `/dashboard` → harus sudah Premium
+
+### 5. Tes via curl (opsional)
+```bash
+curl -X POST https://app.pakasir.com/api/paymentsimulation \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project": "sulalah-pohon-nasab",
+    "order_id": "SULALAH-{userId}-{timestamp}",
+    "amount": 29000,
+    "api_key": "YOUR_API_KEY"
+  }'
+```
+
+## Setelah Lulus Testing
+
+1. Buka dashboard Pakasir → proyek → **Edit Proyek**
+2. Ubah Mode dari **Sandbox** ke **Production**
+3. Lengkapi KYC Pakasir (kalau belum) untuk bisa withdraw
 
 ## File yang Berubah
 
 ```
-migration-v12.sql         → BARU (wajib jalankan)
-lib/
-  generationLevel.js      → support marriages parameter
-  canvasScreenshot.js     → BARU (html2canvas-based exporter)
-  posterStats.js          → terima marriages param
-  geminiPrompt.js         → terima marriages param
-components/
-  PersonForm.js           → alamat + sorted dropdowns + spouse selector
-  FamilyTree.js           → curve original + zoom + marriages support
-  PosterStudio.js         → switch ke screenshot mode
-app/tree/[id]/page.js     → load marriages + auto-save on spouse select
-package.json              → tambah html2canvas
+migration-v13.sql                    → BARU (wajib run)
+app/
+  upgrade/page.js                    → Ganti Trakteer → Pakasir button
+  payment-success/page.js            → Polling upgrade status
+  api/
+    pakasir-create/route.js          → BARU: buat transaksi
+    pakasir-webhook/route.js         → BARU: terima notifikasi auto-upgrade
 ```
 
-## ⚠️ Catatan Penting
+## Catatan Penting
 
-**Untuk pohon Martodimejo kamu:** setelah deploy & migration:
-1. Edit Mbah Roko → set Ayah = Mudiyono Martodimejo
-2. Edit Rifamumza → set Pasangan = Putri Artha Yusmika Dewi
-3. Edit pasangan-pasangan lain (Mu'minah ↔ Arif, Jamilah ↔ Sutrisno, dll.) via dropdown Pasangan
-4. Engine akan otomatis menempatkan mereka sejajar di canvas
-5. Ekspor poster → hasil sekarang pasti akurat (screenshot canvas)
+**idempotency:** Webhook bisa dikirim lebih dari sekali oleh Pakasir.
+Kode sudah handle ini — cek `payment_orders.status` sebelum upgrade.
 
-Jazakallah khayran atas kesabarannya testing. v12 ini insya Allah final untuk fitur poster. 🌳
+**order_id format:** `SULALAH-{uuid}-{timestamp}`
+Webhook mengekstrak userId dari order_id untuk upgrade profil yang tepat.
+
+**Fee:** Pakasir memotong fee dari setiap transaksi (lihat dashboard).
+Untuk QRIS biasanya ~0.7%.
+
+**Trakteer:** Webhook Trakteer (`/api/trakteer-webhook`) masih ada dan tetap berfungsi
+untuk supporter lama yang mungkin masih transaksikan via Trakteer.
