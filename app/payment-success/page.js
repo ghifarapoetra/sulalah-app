@@ -1,9 +1,9 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 
-export default function PaymentSuccess() {
+function PaymentSuccessContent() {
   const [status, setStatus] = useState('checking') // checking | success | pending | error
   const [attempts, setAttempts] = useState(0)
   const router = useRouter()
@@ -121,5 +121,17 @@ export default function PaymentSuccess() {
         <button className="btn btn-ghost" onClick={() => router.push('/dashboard')}>← Ke Dashboard</button>
       </div>
     </div>
+  )
+}
+
+export default function PaymentSuccess() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)' }}>
+        <div style={{ fontSize:14,color:'var(--tx2)' }}>Memuat...</div>
+      </div>
+    }>
+      <PaymentSuccessContent />
+    </Suspense>
   )
 }
