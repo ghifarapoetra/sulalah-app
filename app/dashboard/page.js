@@ -201,12 +201,35 @@ export default function Dashboard() {
             <span style={{ fontSize:10,background:'var(--t2)',color:'var(--t6)',padding:'2px 10px',borderRadius:20,fontWeight:700 }}>AKTIF</span>
           </div>
           <div style={{ fontSize:12,color:'var(--tx2)',lineHeight:1.8,marginBottom:14 }}>
-            ✓ 1 pohon keluarga · ✓ Anggota unlimited · ✓ Deteksi mahram<br/>
-            ✓ Foto & kontak · ✓ Panel doa wafat · ✓ 5 tema PDF
+            🌳 1 pohon · 👥 Anggota unlimited · 🔍 Deteksi mahram<br/>
+            📷 Foto & kontak · 🤲 Panel doa wafat
           </div>
           <button onClick={()=>router.push('/upgrade')} className="btn btn-primary btn-pill" style={{ width:'100%',justifyContent:'center',fontSize:13 }}>
-            ✨ Upgrade Premium — Rp 29.000 seumur hidup
+            👑 Upgrade Premium — Rp 29.000 seumur hidup
           </button>
+        </div>
+      )}
+
+      {/* Quick access Premium features */}
+      {isPremium && (
+        <div style={{ marginTop:24 }}>
+          <div style={{ fontSize:11,fontWeight:700,color:'var(--tx3)',letterSpacing:.5,marginBottom:10 }}>FITUR PREMIUM</div>
+          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
+            <button onClick={()=>router.push('/waris')}
+              style={{ padding:'16px',borderRadius:14,border:'1px solid var(--bd)',background:'var(--card)',cursor:'pointer',textAlign:'left',transition:'all .15s' }}
+              onMouseOver={e=>{e.currentTarget.style.borderColor='var(--t4)';e.currentTarget.style.background='var(--t2)'}}
+              onMouseOut={e=>{e.currentTarget.style.borderColor='var(--bd)';e.currentTarget.style.background='var(--card)'}}>
+              <div style={{ fontSize:26,marginBottom:8 }}>⚖️</div>
+              <div style={{ fontSize:13,fontWeight:700,color:'var(--tx)',marginBottom:3 }}>Kalkulator Waris</div>
+              <div style={{ fontSize:11,color:'var(--tx3)',lineHeight:1.5 }}>Hitung faraid sesuai data pohon keluargamu</div>
+            </button>
+            <button onClick={()=>router.push('/upgrade')}
+              style={{ padding:'16px',borderRadius:14,border:'1px solid var(--bd)',background:'var(--card)',cursor:'pointer',textAlign:'left',opacity:.5 }}>
+              <div style={{ fontSize:26,marginBottom:8 }}>🔔</div>
+              <div style={{ fontSize:13,fontWeight:700,color:'var(--tx)',marginBottom:3 }}>Notifikasi Milad</div>
+              <div style={{ fontSize:11,color:'var(--tx3)',lineHeight:1.5 }}>Segera hadir</div>
+            </button>
+          </div>
         </div>
       )}
 
