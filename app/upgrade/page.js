@@ -6,18 +6,28 @@ import { createClient } from '../../lib/supabase'
 export const dynamic = 'force-dynamic'
 
 const FF = [
-  { t:'1 pohon keluarga', ok:true },{ t:'Anggota unlimited', ok:true },
-  { t:'Deteksi mahram otomatis', ok:true },{ t:'Foto & kontak keluarga', ok:true },
-  { t:'5 tema ekspor poster', ok:true },{ t:'Panel doa & amalan wafat', ok:true },
-  { t:'5 pohon keluarga', ok:false },{ t:'Undang kolaborator', ok:false },
-  { t:'Notifikasi milad Islami', ok:false },{ t:'10 tema poster premium', ok:false },
+  { icon:'🌳', t:'1 pohon keluarga', ok:true },
+  { icon:'👥', t:'Anggota unlimited', ok:true },
+  { icon:'🔍', t:'Deteksi mahram otomatis', ok:true },
+  { icon:'📷', t:'Foto & kontak keluarga', ok:true },
+  { icon:'🖼️', t:'Ekspor poster (dengan watermark)', ok:true },
+  { icon:'🤲', t:'Panel doa & amalan wafat', ok:true },
+  { icon:'🌲', t:'5 pohon keluarga', ok:false },
+  { icon:'✉️', t:'Undang kolaborator', ok:false },
+  { icon:'🔔', t:'Notifikasi milad Islami', ok:false },
+  { icon:'⚖️', t:'Kalkulator waris faraid', ok:false },
 ]
 const FP = [
-  { t:'5 pohon keluarga', ok:true },{ t:'Anggota unlimited', ok:true },
-  { t:'Deteksi mahram otomatis', ok:true },{ t:'Foto & kontak keluarga', ok:true },
-  { t:'Semua 10 tema poster', ok:true },{ t:'Panel doa & amalan wafat', ok:true },
-  { t:'Undang kolaborator keluarga', ok:true },{ t:'Notifikasi milad Islami', ok:true },
-  { t:'Akses semua fitur mendatang', ok:true },{ t:'Bayar sekali, seumur hidup', ok:true },
+  { icon:'🌲', t:'5 pohon keluarga', ok:true },
+  { icon:'👥', t:'Anggota unlimited', ok:true },
+  { icon:'🔍', t:'Deteksi mahram (nasab + nikah)', ok:true },
+  { icon:'📷', t:'Foto & kontak keluarga', ok:true },
+  { icon:'🖼️', t:'Ekspor poster tanpa watermark', ok:true },
+  { icon:'✉️', t:'Undang kolaborator keluarga', ok:true },
+  { icon:'🔔', t:'Notifikasi milad Islami', ok:true },
+  { icon:'⚖️', t:'Kalkulator waris faraid', ok:true },
+  { icon:'♾️', t:'Semua fitur mendatang', ok:true },
+  { icon:'💳', t:'Bayar sekali, seumur hidup', ok:true },
 ]
 
 export default function UpgradePage() {
@@ -92,8 +102,10 @@ export default function UpgradePage() {
             <div style={{ fontSize:12,fontWeight:700,color:'var(--tx3)',letterSpacing:1,marginBottom:8 }}>GRATIS</div>
             <div style={{ fontSize:28,fontWeight:900,color:'var(--tx)',marginBottom:16 }}>Rp 0</div>
             {FF.map((f,i)=>(
-              <div key={i} style={{ display:'flex',alignItems:'center',gap:8,marginBottom:7,fontSize:13,color:f.ok?'var(--tx)':'var(--tx3)' }}>
-                <span style={{ width:16,textAlign:'center' }}>{f.ok?'✓':'·'}</span>{f.t}
+              <div key={i} className={`feature-item${f.ok?'':' locked'}`}>
+                <span className="fi-icon" style={{ background: f.ok ? 'var(--t2)' : 'var(--surf)' }}>{f.icon}</span>
+                <span>{f.t}</span>
+                {!f.ok && <span style={{ marginLeft:'auto',fontSize:10,color:'var(--t5)',fontWeight:700 }}>Premium</span>}
               </div>
             ))}
           </div>
@@ -105,8 +117,9 @@ export default function UpgradePage() {
             <div style={{ fontSize:28,fontWeight:900,color:'var(--tx)',marginBottom:4 }}>Rp 29.000</div>
             <div style={{ fontSize:11,color:'var(--tx3)',marginBottom:16 }}>Pembayaran sekali, akses seumur hidup</div>
             {FP.map((f,i)=>(
-              <div key={i} style={{ display:'flex',alignItems:'center',gap:8,marginBottom:7,fontSize:13,color:'var(--tx)' }}>
-                <span style={{ width:16,textAlign:'center',color:'var(--t5)' }}>✓</span>{f.t}
+              <div key={i} className="feature-item">
+                <span className="fi-icon" style={{ background:'rgba(255,255,255,.15)' }}>{f.icon}</span>
+                <span>{f.t}</span>
               </div>
             ))}
           </div>

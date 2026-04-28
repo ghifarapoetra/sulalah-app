@@ -157,7 +157,8 @@ export default function TreePage() {
         </div>
         <div style={{ display:'flex',gap:8,alignItems:'center',flexWrap:'wrap' }}>
           {persons.length > 0 && <button onClick={()=>setShowPdfModal(true)} style={{ background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.3)',padding:'6px 12px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:600 }}>🖼️ Ekspor</button>}
-          {isOwner && <button onClick={()=>{ setShowMembers(!showMembers);setSelected(null) }} style={{ background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.3)',padding:'6px 12px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:600 }}>👥</button>}
+          {isOwner && profile?.is_premium && <button onClick={()=>{ setShowMembers(!showMembers);setSelected(null) }} style={{ background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.3)',padding:'6px 12px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:600 }}>👥</button>}
+          {isOwner && !profile?.is_premium && <button onClick={()=>router.push('/upgrade')} title="Fitur Premium — Undang Kolaborator" style={{ background:'rgba(255,215,0,.2)',color:'#fcd34d',border:'1px solid rgba(255,215,0,.3)',padding:'6px 12px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:600 }}>👥 👑</button>}
           {canEdit && view==='tree' && <button onClick={()=>{ setEditPerson(null);setView('form') }} style={{ background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.3)',padding:'6px 14px',borderRadius:20,fontSize:13,cursor:'pointer',fontWeight:600 }}>+ Tambah</button>}
           <button onClick={toggleTheme} style={{ background:'rgba(255,255,255,.15)',color:'#fff',border:'1px solid rgba(255,255,255,.3)',padding:'6px 10px',borderRadius:20,fontSize:16,cursor:'pointer',lineHeight:1 }}>{theme==='light'?'🌙':'☀️'}</button>
         </div>

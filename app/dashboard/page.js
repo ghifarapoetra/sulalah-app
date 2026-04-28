@@ -88,18 +88,21 @@ export default function Dashboard() {
 
   return (
     <main style={{ maxWidth:700,margin:'0 auto',padding:'0 16px 40px' }}>
-      <div className="topbar" style={{ borderRadius:'0 0 14px 14px',marginBottom:24 }}>
+      <div className="topbar" style={{ borderRadius:'0 0 16px 16px',marginBottom:24 }}>
         <div>
           <div className="topbar-title">🌳 Sulalah</div>
-          <div className="topbar-sub">Halo, {profile?.full_name || 'Sahabat'}! {isPremium && '✨ Premium'}</div>
+          <div className="topbar-sub" style={{ display:'flex',alignItems:'center',gap:6,marginTop:3 }}>
+            Assalamu'alaikum, {profile?.full_name?.split(' ')[0] || 'Sahabat'} 🌙
+            {isPremium && <span className="badge-premium">👑 Premium</span>}
+          </div>
         </div>
         <div style={{ display:'flex',gap:8,alignItems:'center' }}>
           {!isPremium && (
-            <button onClick={()=>router.push('/upgrade')} style={{ background:'#fcd34d',color:'#78350f',border:'none',padding:'6px 14px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:700 }}>
-              ✨ Upgrade Rp 29k
+            <button onClick={()=>router.push('/upgrade')} style={{ background:'#fcd34d',color:'#78350f',border:'none',padding:'7px 14px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:700,display:'flex',alignItems:'center',gap:4 }}>
+              👑 Upgrade Rp 29k
             </button>
           )}
-          <button onClick={handleLogout} style={{ background:'transparent',color:'rgba(255,255,255,.7)',border:'1px solid rgba(255,255,255,.2)',padding:'6px 12px',borderRadius:20,fontSize:12,cursor:'pointer' }}>Keluar</button>
+          <button onClick={handleLogout} style={{ background:'transparent',color:'rgba(255,255,255,.7)',border:'1px solid rgba(255,255,255,.2)',padding:'7px 12px',borderRadius:20,fontSize:12,cursor:'pointer' }}>Keluar</button>
         </div>
       </div>
 
